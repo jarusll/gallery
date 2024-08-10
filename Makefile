@@ -1,6 +1,7 @@
 .PHONY: build
 build: main.go
-	go build
+	mkdir -p bin
+	go build -o ./bin/gallery
 
 run: build
-	./gallery
+	./bin/gallery
