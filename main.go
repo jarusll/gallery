@@ -6,7 +6,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/saracen/walker"
+	"gorm.io/gorm"
 )
+
+type RawImage struct {
+	gorm.Model
+	Path string
+	Type string
+}
 
 func getAllImages(path string) (chan string, chan error) {
 	resultChan, errorChan := make(chan string), make(chan error)
