@@ -1,18 +1,21 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/saracen/walker"
 )
 
-func main() {
+func getAllImages(path string) (chan string, chan error) {
 	resultChan, errorChan := make(chan string), make(chan error)
-	const path = `/home/jarusll`
 	go func() {
 		walkFn := func(pathname string, fi os.FileInfo) error {
-			if !fi.IsDir() {
+			if !fi.IsDir() &&
+				(strings.HasSuffix(pathname, ".jpeg") ||
+					strings.HasSuffix(pathname, ".jpg") ||
+					strings.HasSuffix(pathname, ".png")) {
 				resultChan <- pathname
 			}
 			return nil
@@ -30,13 +33,14 @@ func main() {
 		close(resultChan)
 		close(errorChan)
 	}()
-	for {
-		select {
-		case result := <-resultChan:
-			_ = result
-		case err := <-errorChan:
-			fmt.Println(err)
-			return
-		}
-	}
+	return resultChan, errorChan
+}
+
+func main() {
+
+	var router *gin.Engine = gin.Default()
+	router.GET("/", func(context *gin.Context) {
+		var resultChan, _ = getAllImages("/home/jarusll/Pictures")
+	})
+	router.Run(":8080")
 }
