@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/saracen/walker"
 	"gorm.io/gorm"
 )
@@ -15,8 +14,8 @@ type RawImage struct {
 	Type string
 }
 
-func getAllImages(path string) (chan string, chan error) {
-	resultChan, errorChan := make(chan string), make(chan error)
+func getAllImages(path string) (chan string, chan error, chan bool) {
+	resultChan, errorChan, doneChan := make(chan string), make(chan error), make(chan bool)
 	go func() {
 		walkFn := func(pathname string, fi os.FileInfo) error {
 			if !fi.IsDir() &&
@@ -37,17 +36,32 @@ func getAllImages(path string) (chan string, chan error) {
 		})
 
 		walker.Walk(path, walkFn, errCallback)
+		doneChan <- true
+		close(doneChan)
 		close(resultChan)
 		close(errorChan)
 	}()
-	return resultChan, errorChan
+	return resultChan, errorChan, doneChan
 }
 
 func main() {
-
-	var router *gin.Engine = gin.Default()
-	router.GET("/", func(context *gin.Context) {
-		var resultChan, _ = getAllImages("/home/jarusll/Pictures")
-	})
-	router.Run(":8080")
+	// db, err := gorm.Open(sqlite.Open("dev.db"), &gorm.Config{})
+	// if err != nil {
+	// 	println("Error initializing DB")
+	// }
+	picturePaths, picturesErr, picDone := getAllImages("/home/jarusll/Pictures")
+	for {
+		select {
+		case path := <-picturePaths:
+			println(path)
+		case pictureError := <-picturesErr:
+			println("Error ", pictureError)
+		case <-picDone:
+			return
+		}
+	}
+	// var router *gin.Engine = gin.Default()
+	// router.GET("/", func(context *gin.Context) {
+	// })
+	// router.Run(":8080")
 }
